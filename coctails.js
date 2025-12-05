@@ -11,6 +11,8 @@ async function searchFromApi(link){
    let response = await fetch(link);
     let data = await response.json();
     
+    console.log(data)
+
     return data; 
 }
 
@@ -19,11 +21,11 @@ async function searchFromApi(link){
 const selectedIngredients = []; //list of selected ingredients
 let currentIngredient = {};
 
-async function getIngredientByName(ingredientName){
+async function getIngredientByName(name){
 
-    let ingredientsFromApi = await searchFromApi(LINK_INGREDIENT_BY_NAME+ingredientName)
+    let response = await searchFromApi(LINK_INGREDIENT_BY_NAME + name)
 
-    return ingredientsFromApi
+    return response
 
 }
 
@@ -31,16 +33,19 @@ async function getIngredientByName(ingredientName){
 const input = document.getElementById("ingredientName");
 
 input.addEventListener("input", async () => {
-     
-    const query = input.value.toLowerCase();
+    currentIngredient = {}
+    
+    //const query = input.value.toLowerCase();
+    let query = input.value.toLowerCase().trim().replaceAll(" ", "_");
+
 
     if (query.length === 0) {
-        return;
+        return
     }
-
+    
     const response = await getIngredientByName(query)
 
-    if(response.ingredients){
+    if(response.ingredients !== null){
         currentIngredient.name = response.ingredients[0].strIngredient
         currentIngredient.id = response.ingredients[0].idIngredient
     }
@@ -65,7 +70,7 @@ function addHTMLIngredient(){
     const ingredientImg = document.createElement("img")
     ingredientImg.classList.add("img-ingredient")
     ingredientImg.id = currentIngredient.id
-    ingredientImg.src = LINK_INGREDIENT_IMG + currentIngredient.name + "-small.png" 
+    ingredientImg.src = LINK_INGREDIENT_IMG + currentIngredient.name.toLowerCase() + "-small.png" 
 
     ingredientImg.addEventListener("click", () =>{
         const idToRemove = ingredientImg.id;
@@ -100,8 +105,6 @@ function addHTMLIngredient(){
 //Coctails
 ///// the right tool is MutationObserver
 
-
-
 async function getCoctailsByIngredients(ingredient){
 
     let coctailsFromApi = await searchFromApi(LINK_COCTAILS_BY_INGREDIENT+ingredient)
@@ -109,18 +112,31 @@ async function getCoctailsByIngredients(ingredient){
     return coctailsFromApi
 }
 
-const output = document.getElementById("coctailsList");
+const coctailsList = document.getElementById("coctailsList");
+let selectedCoctails = []
+let menu = [] // menu of Coctails
+let menuCoctail = document.getElementById("menuCoctails") //section
 
 const observer = new MutationObserver(async (mutationsList) => {
+const labelCoctail = document.getElementById("coctail-label")
+ if(selectedCoctails.length === 0){
+       coctailsList.style.display = "none"   
+       labelCoctail.textContent = ""  
+    }
+
   for (const mutation of mutationsList) {
     if (mutation.type === "childList") {
     
-      output.innerHTML = ""
+      coctailsList.innerHTML = ""
+      
       for(let i = 0; i < selectedIngredients.length; i++){
 
         let response = await getCoctailsByIngredients(selectedIngredients[i].name)
-        addHTMLCoctails(response.drinks)
-
+        if(response.drinks !== "no data found"){
+            labelCoctail.textContent = ""
+             
+             addHTMLCoctails(response.drinks)
+        }
       }
     
     }
@@ -128,12 +144,11 @@ const observer = new MutationObserver(async (mutationsList) => {
 });
 
 const ingredientsList = document.getElementById("ingredientList")
+
 // Watch for changes in direct children and deeper descendants
 observer.observe(ingredientsList, { childList: true, subtree: true });
 
-let selectedCoctails = []
-let menu = [] // menu of Coctails
-let menuCoctail = document.getElementById("menuCoctails") //section
+
 
 async function getCoctailById(CoctailID){
 
@@ -159,6 +174,8 @@ function addHTMLCoctails(coctails){
             const idToRemove = imagContainer.id;
 
           const index = selectedCoctails.findIndex(item => item.id === idToRemove);
+
+         
             if (index !== -1) {
                 
                 selectedCoctails.splice(index, 1);
@@ -179,8 +196,8 @@ function addHTMLCoctails(coctails){
            
         })
 
-        output.style.display = "flex"
-        output.appendChild(imagContainer)
+        coctailsList.style.display = "flex"
+        coctailsList.appendChild(imagContainer)
 
     }  
 }
@@ -229,7 +246,6 @@ async function menuGenerator(){
 
     menu.push(coctail)
 }
-    console.log("Menu container")
     
     for(let i = 0; i < menu.length;i++){
         addHTMLMenu(menu[i])
