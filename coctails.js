@@ -18,7 +18,6 @@ const input = document.getElementById("ingredientName");
 const ingredientsList = document.getElementById("ingredientList");
 const coctailsList = document.getElementById("coctailsList");
 const menuCoctail = document.getElementById("menuCoctails");
-const labelCoctail = document.getElementById("coctail-label");
 
 // ================== API ===================
 async function fetchJSON(url) {
@@ -104,12 +103,10 @@ async function refreshCoctails() {
 
   if (selectedIngredients.length === 0) {
     coctailsList.style.display = "none";
-    labelCoctail.textContent = "";
     return;
   }
 
   coctailsList.style.display = "flex";
-  labelCoctail.textContent = "";
 
   for (const ing of selectedIngredients) {
     const data = await fetchJSON(API.COCTAILS_BY_INGREDIENT + ing.name);
