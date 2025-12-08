@@ -106,7 +106,7 @@ const observer = new MutationObserver(async (mutationsList) => {
 
  if(selectedCoctails.length === 0){
        coctailsList.style.display = "none"   
-       labelCoctail.textContent = ""  
+       //labelCoctail.textContent = ""  
     }
 
   for (const mutation of mutationsList) {
