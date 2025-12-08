@@ -118,7 +118,7 @@ let menu = [] // menu of Coctails
 let menuCoctail = document.getElementById("menuCoctails") //section
 
 const observer = new MutationObserver(async (mutationsList) => {
-const labelCoctail = document.getElementById("coctail-label")
+let labelCoctail = document.getElementById("coctail-label")
  if(selectedCoctails.length === 0){
        coctailsList.style.display = "none"   
        labelCoctail.textContent = ""  
