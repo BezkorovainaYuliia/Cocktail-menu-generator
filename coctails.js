@@ -1,290 +1,223 @@
-const LINK_INGREDIENT_BY_NAME = "https://www.thecocktaildb.com/api/json/v1/1/search.php?i="
-const LINK_INGREDIENT_IMG = "https://www.thecocktaildb.com/images/ingredients/" //gin-small.png"
-const LINK_COCTAILS_BY_INGREDIENT = "https:/www.thecocktaildb.com/api/json/v1/1/filter.php?i="
-const LINK_COCTAIL_BY_NAME = "https://www.thecocktaildb.com/api/json/v1/1/search.php?s="
-const LINK_COCTAIL_BY_ID = "https://www.thecocktaildb.com/api/json/v1/1/lookup.php?i="
+// ================== CONSTANTS ===================
+const API = {
+  INGREDIENT_BY_NAME: "https://www.thecocktaildb.com/api/json/v1/1/search.php?i=",
+  INGREDIENT_IMG: "https://www.thecocktaildb.com/images/ingredients/",
+  COCTAILS_BY_INGREDIENT: "https://www.thecocktaildb.com/api/json/v1/1/filter.php?i=",
+  COCTAIL_BY_ID: "https://www.thecocktaildb.com/api/json/v1/1/lookup.php?i="
+};
 const IMAGE_NOT_FOUND = "https://previews.123rf.com/images/asmati/asmati1701/asmati170100126/68986757-no-cocktail-sign-illustration.jpg";
 
-
-async function searchFromApi(link){
-
-   let response = await fetch(link);
-    let data = await response.json();
-    
-    console.log(data)
-
-    return data; 
-}
-
-const selectedIngredients = []; //list of selected ingredients
+// ================== STATE ===================
+let selectedIngredients = [];
+let selectedCoctails = [];
+let menu = [];
 let currentIngredient = {};
+
+// ================== DOM ===================
 const input = document.getElementById("ingredientName");
+const ingredientsList = document.getElementById("ingredientList");
 const coctailsList = document.getElementById("coctailsList");
-const ingredientsList = document.getElementById("ingredientList")
-let selectedCoctails = []
-let menu = [] // menu of Coctails
-let menuCoctail = document.getElementById("menuCoctails") //section
+const menuCoctail = document.getElementById("menuCoctails");
+const labelCoctail = document.getElementById("coctail-label");
 
+// ================== API ===================
+async function fetchJSON(url) {
+  const res = await fetch(url);
+  return res.json();
+}
 
+// ================== SEARCH INGREDIENT ===================
 input.addEventListener("input", async () => {
-    currentIngredient = {}
-    
-    let query = input.value.toLowerCase().trim().replaceAll(" ", "_");
+  currentIngredient = {};
+  let query = input.value.toLowerCase().trim().replaceAll(" ", "_");
 
+  if (!query) return;
 
-    if (query.length === 0) {
-        return
-    }
-    
-    //API
-    const link = LINK_INGREDIENT_BY_NAME + query
-    let response = await searchFromApi(link)
+  const data = await fetchJSON(API.INGREDIENT_BY_NAME + query);
 
-    if(response.ingredients !== null){
-        currentIngredient.name = response.ingredients[0].strIngredient
-        currentIngredient.id = response.ingredients[0].idIngredient
-    }
-    
-});
-
-input.addEventListener("keydown", (event) =>{
-    if (event.key === "Enter") {
-    event.preventDefault();
-    addHTMLIngredient();
-    input.value=""
-  }
-
-});
-
-
-
-function addHTMLIngredient(){
-
-    if(!selectedIngredients.find(item => item.id === currentIngredient.id)){
-
-    const ingredientImg = document.createElement("img")
-    ingredientImg.classList.add("img-ingredient")
-    ingredientImg.id = currentIngredient.id
-    ingredientImg.src = LINK_INGREDIENT_IMG + currentIngredient.name.toLowerCase() + "-small.png" 
-
-    ingredientImg.addEventListener("click", () =>{
-        const idToRemove = ingredientImg.id;
-
-
-          const index = selectedIngredients.findIndex(item => item.id === idToRemove);
-            if (index !== -1) {
-                selectedIngredients.splice(index, 1);
-            }
-
-            if (selectedIngredients.length === 0){
-                   ingredientsList.style.display = "none"
-            }
-
-          const domElement = document.getElementById(idToRemove);
-            if (domElement) {
-                domElement.remove(); 
-            }
-    })
-
-    selectedIngredients.push(currentIngredient)
-    
-    ingredientsList.appendChild(ingredientImg)
-    ingredientsList.style.flexdirection = "row"; 
-    ingredientsList.style.display = "flex"
-    
-    currentIngredient = {}
-    }
-
-}
-
-//Coctails
-///// the right tool is MutationObserver
-//observer
-let labelCoctail = document.getElementById("coctail-label")
-
-const observer = new MutationObserver(async (mutationsList) => {
-
- if(selectedCoctails.length === 0){
-       coctailsList.style.display = "none"   
-       //labelCoctail.textContent = ""  
-    }
-
-  for (const mutation of mutationsList) {
-    if (mutation.type === "childList") {
-    
-      coctailsList.innerHTML = ""
-      
-      for(let i = 0; i < selectedIngredients.length; i++){
-
-        //API
-        const link = LINK_COCTAILS_BY_INGREDIENT + selectedIngredients[i].name
-        let response = await searchFromApi(link)
-
-        if(response.drinks !== "no data found"){
-            labelCoctail.textContent = ""
-             
-             addHTMLCoctails(response.drinks)
-        }
-      }
-    
-    }
+  if (data.ingredients) {
+    currentIngredient = {
+      id: data.ingredients[0].idIngredient,
+      name: data.ingredients[0].strIngredient
+    };
   }
 });
 
+// enter => add ingredient
+input.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    addIngredient();
+    input.value = "";
+  }
+});
 
-// Watch for changes in direct children and deeper descendants
-observer.observe(ingredientsList, { childList: true, subtree: true });
+// ================== ADD INGREDIENT ===================
+function addIngredient() {
+  if (!currentIngredient.id) return;
 
+  if (selectedIngredients.find(i => i.id === currentIngredient.id)) {
+    return;
+  }
 
-function addHTMLCoctails(coctails){
-    
-    for(let i = 0; i < coctails.length; i++){
+  // copy object
+  const ingredient = { ...currentIngredient };
+  selectedIngredients.push(ingredient);
 
-        const imagContainer = document.createElement("img")
-        imagContainer.classList.add("img-ingredient")
-        imagContainer.src = coctails[i].strDrinkThumb+"/small"
-        imagContainer.id = coctails[i].idDrink
-        imagContainer.alt = coctails[i].strDrink
+  const img = document.createElement("img");
+  img.classList.add("img-ingredient");
+  img.id = ingredient.id;
+  img.src = API.INGREDIENT_IMG + ingredient.name.toLowerCase() + "-small.png";
 
-        imagContainer.addEventListener("click", ()=>{
+  img.addEventListener("click", () => removeIngredient(ingredient.id));
 
-            const idToRemove = imagContainer.id;
+  ingredientsList.appendChild(img);
+  ingredientsList.style.display = "flex";
 
-            const index = selectedCoctails.findIndex(item => item.id === idToRemove);
-
-            if (index !== -1) {
-                
-                selectedCoctails.splice(index, 1);
-                imagContainer.style.background = "white"
-            } else {
-            
-                let coctailObject = {}
-            coctailObject.name = coctails[i].strDrink
-            coctailObject.image = coctails[i].strDrinkThumb
-            coctailObject.id = coctails[i].idDrink
-            
-            imagContainer.style.background = "red"
-            selectedCoctails.push(coctailObject)
-
-            }
-            
-            menuGenerator()
-           
-        })
-
-        coctailsList.style.display = "flex"
-        coctailsList.appendChild(imagContainer)
-
-    }  
+  currentIngredient = {};
+  refreshCoctails();
 }
 
-async function menuGenerator(){
-    menuCoctail.innerHTML = ""
-    menu.splice(0, menu.length)
-    
-    for(let i = 0; i < selectedCoctails.length; i++){
+// ================== REMOVE INGREDIENT ===================
+function removeIngredient(id) {
+  // remove from array
+  selectedIngredients = selectedIngredients.filter(x => x.id !== id);
 
-            //API
-            const link = LINK_COCTAIL_BY_ID + selectedCoctails[i].id
-            let response = await searchFromApi(link)
+  // remove DOM
+  const el = document.getElementById(id);
+  if (el) el.remove();
 
-            let coctailInfo = response.drinks[0]
+  if (selectedIngredients.length === 0) {
+    ingredientsList.style.display = "none";
+  }
 
-            //Object of coctail
-            let coctail = {}
-            coctail.id = coctailInfo.idDrink //id
-            coctail.name = coctailInfo.strDrink // name
-            coctail.src = coctailInfo.strDrinkThumb //img
-            coctail.alcohol = coctailInfo.strAlcoholic //alcoholc or non
-            coctail.glass = coctailInfo.strGlass //glass for coctail
-            coctail.instruction = coctailInfo.strInstructions //instruction
-            
-            coctail.ingredients = []
-            for (let i = 1; i <= 15; i++) {
-            
+  // remove cocktails related to removed ingredient
+  selectedCoctails = selectedCoctails.filter(c => c.idIngredient !== id);
 
-              const ingredientKey = `strIngredient${i}`;
-              const measureKey = `strMeasure${i}`;
-
-              const ingredient = coctailInfo[ingredientKey];
-              const measure = coctailInfo[measureKey];
-    
-
-            if (ingredient !== null ){
-                let ing = {}
-                ing.name = ingredient
-                ing.measure = measure
-                
-                coctail.ingredients.push(ing)
-            }
-    
-    }
-
-    menu.push(coctail)
-}
-    
-    for(let i = 0; i < menu.length;i++){
-        addHTMLMenu(menu[i])
-    }
+  refreshCoctails();
+  menuGenerator();
 }
 
+// ================== REFRESH COCTAILS LIST ===================
+async function refreshCoctails() {
+  coctailsList.innerHTML = "";
 
-function addHTMLMenu(coctailInfo){
-    
-    const divCoctail = document.createElement("div")
-    divCoctail.style.display = "flex"
-    
+  if (selectedIngredients.length === 0) {
+    coctailsList.style.display = "none";
+    labelCoctail.textContent = "";
+    return;
+  }
 
-    divCoctail.id = coctailInfo.id
+  coctailsList.style.display = "flex";
+  labelCoctail.textContent = "";
 
-    const imgCoctail = document.createElement("img")
-    imgCoctail.classList.add("img-ingredient")
-    imgCoctail.src = coctailInfo.src + "/medium" //350px x 350px
+  for (const ing of selectedIngredients) {
+    const data = await fetchJSON(API.COCTAILS_BY_INGREDIENT + ing.name);
 
-    
+    if (data.drinks && data.drinks !== "no data found") {
+      addCoctailsUI(data.drinks, ing.id);
+    }
+  }
+}
 
-    const divInfoCoctail = document.createElement("div")
-    divInfoCoctail.style.marginLeft = "10px"
+// ================== ADD COCTAILS THUMBNAILS ===================
+function addCoctailsUI(drinks, ingredientID) {
+  drinks.forEach(drink => {
+    const img = document.createElement("img");
+    img.classList.add("img-ingredient");
+    img.src = drink.strDrinkThumb + "/small";
+    img.id = drink.idDrink;
+    img.alt = drink.strDrink;
 
-    const h3NameCoctail = document.createElement("h3")
-    h3NameCoctail.textContent = coctailInfo.name
-    divInfoCoctail.appendChild(h3NameCoctail)
+    // toggle cocktail
+    img.addEventListener("click", () =>
+      toggleCocktail(drink, ingredientID, img)
+    );
 
-    const pTypeCoctail = document.createElement("p")
-    pTypeCoctail.textContent = coctailInfo.alcohol
-    divInfoCoctail.appendChild(pTypeCoctail)
+    coctailsList.appendChild(img);
+  });
+}
 
-    const pGlassType = document.createElement("p")
-    pGlassType.textContent = coctailInfo.glass
-    divInfoCoctail.appendChild(pGlassType)
+// ================== TOGGLE COCKTAIL SELECT ===================
+function toggleCocktail(drink, ingredientID, imgEl) {
+  const exists = selectedCoctails.find(c => c.id === drink.idDrink);
 
-    const pIngredients = document.createElement("p")
+  if (exists) {
+    selectedCoctails = selectedCoctails.filter(c => c.id !== drink.idDrink);
+    imgEl.style.background = "white";
+  } else {
+    selectedCoctails.push({
+      id: drink.idDrink,
+      name: drink.strDrink,
+      image: drink.strDrinkThumb,
+      idIngredient: ingredientID
+    });
+    imgEl.style.background = "red";
+  }
 
-    pIngredients.textContent = ""
+  menuGenerator();
+}
 
-    for(let i = 0; i < coctailInfo.ingredients.length; i++){
+// ================== MENU GENERATOR ===================
+async function menuGenerator() {
+  menu = [];
+  menuCoctail.innerHTML = "";
 
-        if(coctailInfo.ingredients[i].measure !== null){
-            pIngredients.textContent += coctailInfo.ingredients[i].measure  
-        }
-        
-        pIngredients.textContent += "\t" + coctailInfo.ingredients[i].name
+  for (const item of selectedCoctails) {
+    const data = await fetchJSON(API.COCTAIL_BY_ID + item.id);
+    const info = data.drinks[0];
 
-       if (i < coctailInfo.ingredients.length - 1){
-            pIngredients.textContent += ",\t"
-        }
+    const cocktail = {
+      id: info.idDrink,
+      name: info.strDrink,
+      src: info.strDrinkThumb,
+      alcohol: info.strAlcoholic,
+      glass: info.strGlass,
+      instruction: info.strInstructions,
+      ingredients: []
+    };
 
+    for (let i = 1; i <= 15; i++) {
+      const ing = info[`strIngredient${i}`];
+      const measure = info[`strMeasure${i}`];
+
+      if (!ing) continue;
+
+      cocktail.ingredients.push({
+        name: ing,
+        measure: measure || ""
+      });
     }
 
-    divInfoCoctail.appendChild(pIngredients)
+    menu.push(cocktail);
+  }
 
-    const pInstruction = document.createElement("p")
-    pInstruction.textContent = "Instruction: " + coctailInfo.instruction
+  menu.forEach(addMenuUI);
+}
 
-    divInfoCoctail.appendChild(pInstruction)
+// ================== RENDER MENU ===================
+function addMenuUI(coctailInfo) {
+  const wrapper = document.createElement("div");
+  wrapper.style.display = "flex";
+  wrapper.id = coctailInfo.id;
 
-    divCoctail.appendChild(imgCoctail)
-    divCoctail.appendChild(divInfoCoctail)
+  const img = document.createElement("img");
+  img.classList.add("img-ingredient");
+  img.src = coctailInfo.src + "/medium";
 
-    menuCoctail.appendChild(divCoctail)
+  const info = document.createElement("div");
+  info.style.marginLeft = "10px";
+
+  info.innerHTML = `
+    <h3>${coctailInfo.name}</h3>
+    <p>${coctailInfo.alcohol}</p>
+    <p>${coctailInfo.glass}</p>
+    <p>${coctailInfo.ingredients.map(i => `${i.measure} ${i.name}`).join(", ")}</p>
+    <p><b>Instruction:</b> ${coctailInfo.instruction}</p>
+  `;
+
+  wrapper.appendChild(img);
+  wrapper.appendChild(info);
+
+  menuCoctail.appendChild(wrapper);
 }
