@@ -16,26 +16,19 @@ async function searchFromApi(link){
     return data; 
 }
 
-// Ingredients
-
 const selectedIngredients = []; //list of selected ingredients
 let currentIngredient = {};
-
-async function getIngredientByName(name){
-
-    let response = await searchFromApi(LINK_INGREDIENT_BY_NAME + name)
-
-    return response
-
-}
-
-
 const input = document.getElementById("ingredientName");
+const coctailsList = document.getElementById("coctailsList");
+const ingredientsList = document.getElementById("ingredientList")
+let selectedCoctails = []
+let menu = [] // menu of Coctails
+let menuCoctail = document.getElementById("menuCoctails") //section
+
 
 input.addEventListener("input", async () => {
     currentIngredient = {}
     
-    //const query = input.value.toLowerCase();
     let query = input.value.toLowerCase().trim().replaceAll(" ", "_");
 
 
@@ -43,7 +36,9 @@ input.addEventListener("input", async () => {
         return
     }
     
-    const response = await getIngredientByName(query)
+    //API
+    const link = LINK_INGREDIENT_BY_NAME + query
+    let response = await searchFromApi(link)
 
     if(response.ingredients !== null){
         currentIngredient.name = response.ingredients[0].strIngredient
@@ -61,11 +56,11 @@ input.addEventListener("keydown", (event) =>{
 
 });
 
+
+
 function addHTMLIngredient(){
 
     if(!selectedIngredients.find(item => item.id === currentIngredient.id)){
-
-    const list = document.getElementById("ingredientList");
 
     const ingredientImg = document.createElement("img")
     ingredientImg.classList.add("img-ingredient")
@@ -82,7 +77,7 @@ function addHTMLIngredient(){
             }
 
             if (selectedIngredients.length === 0){
-                   list.style.display = "none"
+                   ingredientsList.style.display = "none"
             }
 
           const domElement = document.getElementById(idToRemove);
@@ -93,9 +88,9 @@ function addHTMLIngredient(){
 
     selectedIngredients.push(currentIngredient)
     
-    list.appendChild(ingredientImg)
-    list.style.flexdirection = "row"; 
-    list.style.display = "flex"
+    ingredientsList.appendChild(ingredientImg)
+    ingredientsList.style.flexdirection = "row"; 
+    ingredientsList.style.display = "flex"
     
     currentIngredient = {}
     }
@@ -104,21 +99,11 @@ function addHTMLIngredient(){
 
 //Coctails
 ///// the right tool is MutationObserver
-
-async function getCoctailsByIngredients(ingredient){
-
-    let coctailsFromApi = await searchFromApi(LINK_COCTAILS_BY_INGREDIENT+ingredient)
-
-    return coctailsFromApi
-}
-
-const coctailsList = document.getElementById("coctailsList");
-let selectedCoctails = []
-let menu = [] // menu of Coctails
-let menuCoctail = document.getElementById("menuCoctails") //section
+//observer
+let labelCoctail = document.getElementById("coctail-label")
 
 const observer = new MutationObserver(async (mutationsList) => {
-let labelCoctail = document.getElementById("coctail-label")
+
  if(selectedCoctails.length === 0){
        coctailsList.style.display = "none"   
        labelCoctail.textContent = ""  
@@ -131,7 +116,10 @@ let labelCoctail = document.getElementById("coctail-label")
       
       for(let i = 0; i < selectedIngredients.length; i++){
 
-        let response = await getCoctailsByIngredients(selectedIngredients[i].name)
+        //API
+        const link = LINK_COCTAILS_BY_INGREDIENT + selectedIngredients[i].name
+        let response = await searchFromApi(link)
+
         if(response.drinks !== "no data found"){
             labelCoctail.textContent = ""
              
@@ -143,20 +131,9 @@ let labelCoctail = document.getElementById("coctail-label")
   }
 });
 
-const ingredientsList = document.getElementById("ingredientList")
 
 // Watch for changes in direct children and deeper descendants
 observer.observe(ingredientsList, { childList: true, subtree: true });
-
-
-
-async function getCoctailById(CoctailID){
-
-     let coctailsFromApi = await searchFromApi(LINK_COCTAIL_BY_ID+CoctailID)
-
-    return coctailsFromApi
-
-}
 
 
 function addHTMLCoctails(coctails){
@@ -173,9 +150,8 @@ function addHTMLCoctails(coctails){
 
             const idToRemove = imagContainer.id;
 
-          const index = selectedCoctails.findIndex(item => item.id === idToRemove);
+            const index = selectedCoctails.findIndex(item => item.id === idToRemove);
 
-         
             if (index !== -1) {
                 
                 selectedCoctails.splice(index, 1);
@@ -202,16 +178,16 @@ function addHTMLCoctails(coctails){
     }  
 }
 
-
-
-
 async function menuGenerator(){
     menuCoctail.innerHTML = ""
     menu.splice(0, menu.length)
     
     for(let i = 0; i < selectedCoctails.length; i++){
-      
-            let response = await getCoctailById(selectedCoctails[i].id)
+
+            //API
+            const link = LINK_COCTAIL_BY_ID + selectedCoctails[i].id
+            let response = await searchFromApi(link)
+
             let coctailInfo = response.drinks[0]
 
             //Object of coctail
